@@ -1,6 +1,6 @@
 {
   "name": "dsh-hub-adapters",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "把已装第三方插件的现有页面搬进「插件中心」：不改第三方代码，通过渲染它们已注册的 main / settings.section 条目实现。渲染失败时显示降级入口。",
   "keywords": ["dsh", "dsh-plugin", "deepseek-harness", "plugin-hub", "adapter"],
   "type": "module",
@@ -17,6 +17,15 @@
   "scripts": { "check": "node --check index.js && node --check client.js" },
   "license": "MIT",
   "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shenqidehu/dsh-plugin-hub.git",
+    "directory": "adapters"
+  },
+  "homepage": "https://github.com/shenqidehu/dsh-plugin-hub/tree/main/adapters#readme",
+  "bugs": {
+    "url": "https://github.com/shenqidehu/dsh-plugin-hub/issues"
+  },
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },
     "client": { "platform": "web", "immediately": true }

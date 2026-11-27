@@ -35,6 +35,14 @@
   },
   "license": "MIT",
   "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shenqidehu/dsh-plugin-hub.git"
+  },
+  "homepage": "https://github.com/shenqidehu/dsh-plugin-hub#readme",
+  "bugs": {
+    "url": "https://github.com/shenqidehu/dsh-plugin-hub/issues"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
