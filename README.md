@@ -15,12 +15,13 @@
 ### 1. 安装主面板
 
 ```bash
+# 从 npm（推荐）
+plugin_manager install_bundle target="@twtsg/dsh-plugin-hub"
+
+# 或直接从 GitHub
 plugin_manager install_bundle target="github:shenqidehu/dsh-plugin-hub"
-```
 
-或者先克隆再本地安装：
-
-```bash
+# 或先克隆再本地安装
 git clone https://github.com/shenqidehu/dsh-plugin-hub.git
 plugin_manager install_bundle target="link:<克隆路径>"
 ```
@@ -32,6 +33,10 @@ plugin_manager install_bundle target="link:<克隆路径>"
 让已经装好的第三方插件（任务看板、上下文、皮肤市场、壁纸引擎等）也出现在面板里。
 
 ```bash
+# 从 npm
+plugin_manager install_bundle target="dsh-hub-adapters"
+
+# 或从克隆目录
 plugin_manager install_bundle target="link:<克隆路径>/adapters"
 ```
 

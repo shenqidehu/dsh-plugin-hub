@@ -19,7 +19,7 @@
  * 未安装本插件时 inject 回调永不执行，插件静默降级，不会报错。
  */
 window.__ModuleLoader__.load({
-  id: 'dsh-plugin-hub',
+  id: '@twtsg/dsh-plugin-hub',
   factory: function (require) {
     var module = { exports: {} }
     var exports = module.exports

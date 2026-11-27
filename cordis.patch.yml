@@ -4,4 +4,4 @@
 # package.json 的 dsh.client 声明，宿主按声明自动组装 client bundle。
 - insert:
     - id: dsh-plugin-hub
-      name: dsh-plugin-hub
+      name: '@twtsg/dsh-plugin-hub'

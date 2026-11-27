@@ -29,14 +29,6 @@ window.__ModuleLoader__.load({
 
     function noop() {}
 
-    /**
-     * task-board 的面板组件通过注册时的 inject 拿 controller
-     * （`inject: () => ({ controller })`），直调时必须手动补上。
-     * 它把 controller 存在自己 provide 的 `taskBoard` 服务的公开字段里，
-     * 这里用可选注入把服务引用缓存下来。
-     */
-    var taskBoardService = null
-
     /* ── CSS ─────────────────────────────────────────────────────────────── */
     var CSS = [
       '.__ad_hostMain{height:100%;min-height:0;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}',
@@ -44,6 +36,7 @@ window.__ModuleLoader__.load({
       '.__ad_hostSettings{padding:16px 18px 28px;box-sizing:border-box}',
 
       '.__ad_page{padding:16px 18px 28px;box-sizing:border-box;color:var(--dsw-alias-label-primary,#e6edf3)}',
+      '.__ad_note{max-width:600px;margin-bottom:12px;font-size:12px;line-height:1.75;color:var(--dsw-alias-label-tertiary,#8b949e)}',
       '.__ad_card{max-width:600px;display:flex;flex-direction:column;gap:10px;border:1px solid var(--dsw-alias-border-l2,#30363d);border-radius:10px;padding:14px 16px;background:var(--dsw-alias-bg-layer-2,rgba(255,255,255,.02))}',
       '.__ad_title{font-size:14px;font-weight:600;line-height:1.4}',
       '.__ad_avatar{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:rgba(148,163,184,.18);color:var(--dsw-alias-label-secondary,#9aa4b2)}',
@@ -146,13 +139,13 @@ window.__ModuleLoader__.load({
     /* ── 桥：直接渲染第三方插件注册的组件 ────────────────────────────────── */
     function Bridge(props) {
       var target = props.target
-      var resolveComponent = props.resolveComponent
+      var resolveEntry = props.resolveEntry
       var openPanel = props.openPanel
 
-      var Component = null
+      var resolved = null
       var failure = null
       try {
-        Component = typeof resolveComponent === 'function' ? resolveComponent() : null
+        resolved = typeof resolveEntry === 'function' ? resolveEntry() : null
       } catch (error) {
         failure = error
       }
@@ -160,7 +153,7 @@ window.__ModuleLoader__.load({
       if (failure !== null) {
         return h(Fallback, { target: target, error: failure, openPanel: openPanel })
       }
-      if (!Component) {
+      if (!resolved || !resolved.component) {
         return h(Fallback, {
           target: target,
           error: new Error('没有找到「' + target.only + '」对应的组件：插件可能已禁用，或升级后改了槽位 id'),
@@ -168,26 +161,35 @@ window.__ModuleLoader__.load({
         })
       }
 
-      // settings.section 的 ownerProps 契约要求 close；main 的 ownerProps 为空。
-      var ownerProps = target.slot === 'settings.section' ? { close: noop } : {}
-
-      // 少数插件（如 task-board）的面板靠注册时的 inject 拿数据源，直调时要补上。
-      if (typeof target.resolveExtra === 'function') {
-        var extra = null
-        try { extra = target.resolveExtra() } catch (error) { extra = null }
-        if (extra) {
-          for (var extraName in extra) {
-            if (Object.prototype.hasOwnProperty.call(extra, extraName)) {
-              ownerProps[extraName] = extra[extraName]
-            }
+      // 按框架组装顺序重建 props：
+      //   1. 注册时的 inject 结果（插件自己的 control / statusFeed / controller …）
+      //   2. locale 座位 t（条目声明了 locale 时）
+      //   3. 槽位 ownerProps（owner wins，与框架一致）
+      var ownerProps = {}
+      if (resolved.injected) {
+        for (var injectedName in resolved.injected) {
+          if (Object.prototype.hasOwnProperty.call(resolved.injected, injectedName)) {
+            ownerProps[injectedName] = resolved.injected[injectedName]
           }
         }
+      }
+      if (resolved.t) ownerProps.t = resolved.t
+      if (target.ownerProps) {
+        for (var ownerName in target.ownerProps) {
+          if (Object.prototype.hasOwnProperty.call(target.ownerProps, ownerName)) {
+            ownerProps[ownerName] = target.ownerProps[ownerName]
+          }
+        }
+      }
+      if (target.slot === 'settings.section' && ownerProps.close === undefined) {
+        ownerProps.close = noop
       }
 
       var hostClass = target.slot === 'main' ? '__ad_hostMain' : '__ad_hostSettings'
 
       return h('div', { className: hostClass },
-        h(Boundary, { target: target, openPanel: openPanel }, h(Component, ownerProps))
+        target.note ? h('div', { className: '__ad_note' }, target.note) : null,
+        h(Boundary, { target: target, openPanel: openPanel }, h(resolved.component, ownerProps))
       )
     }
 
@@ -208,16 +210,7 @@ window.__ModuleLoader__.load({
         id: 'task-board',
         label: '任务看板',
         order: 101,
-        usage: {
-          slot: 'main',
-          only: 'task-board',
-          label: '任务看板',
-          resolveExtra: function () {
-            if (taskBoardService === null) return null
-            var controller = taskBoardService.controller
-            return controller === undefined ? null : { controller: controller }
-          }
-        }
+        usage: { slot: 'main', only: 'task-board', label: '任务看板' }
       },
       {
         id: 'dsh-talk-map',
@@ -249,29 +242,28 @@ window.__ModuleLoader__.load({
         label: '启动界面',
         order: 106,
         settings: { slot: 'settings.section', only: 'startup-screen', label: '启动界面' }
+      },
+      {
+        // ds-harness-remote 没有整页面板，它的 UI 是动作按钮。
+        // 不用 sidebar.footer.action 那个：它靠 useFooterLane 把节点挂进侧边栏
+        // 底部的固定容器，换到面板里渲染会是空白。
+        // 改用会话头部那个 inline 按钮（同插件、同一套 inject）。
+        id: 'ds-harness-remote',
+        label: '远程控制',
+        order: 107,
+        usage: {
+          slot: 'conversation.session.header.utilities',
+          only: 'ds-harness-remote-global-context',
+          label: '远程控制',
+          note: 'P2P 端到端加密远程访问：用手机或其它设备连上这台电脑的 Harness。点下面的按钮打开远程控制面板（二维码 / 设备列表 / 连接状态）。',
+          ownerProps: { inline: true }
+        }
       }
     ]
 
     /* ── 注册 ─────────────────────────────────────────────────────────────── */
     function apply(ctx) {
       ensureStyle(ctx)
-
-      // task-board 把 live controller 存在它 provide 的 taskBoard 服务里。
-      // 可选注入：没装该插件时回调不执行，不影响其它适配。
-      if (ctx && typeof ctx.inject === 'function') {
-        try {
-          ctx.inject(['taskBoard'], function (scope) {
-            taskBoardService = (scope && (scope.taskBoard
-              || (typeof scope.get === 'function' ? scope.get('taskBoard') : null))) || null
-            return function () { taskBoardService = null }
-          })
-        } catch (error) {
-          if (typeof console !== 'undefined' && console.warn) {
-            console.warn('[dsh-hub-adapters] 无法注入 taskBoard 服务：'
-              + (error && error.message ? error.message : String(error)))
-          }
-        }
-      }
 
       for (var i = 0; i < ENTRIES.length; i++) {
         registerEntry(ctx, ENTRIES[i], 'usage', 'plugin-hub.usage')
@@ -292,7 +284,7 @@ window.__ModuleLoader__.load({
           inject: function () {
             return {
               target: target,
-              resolveComponent: function () { return resolveComponent(ctx, target) },
+              resolveEntry: function () { return resolveEntry(ctx, target) },
               openPanel: function (panelId) {
                 try {
                   if (ctx.layout && typeof ctx.layout.selectPanel === 'function') ctx.layout.selectPanel(panelId)
@@ -308,8 +300,11 @@ window.__ModuleLoader__.load({
       })
     }
 
-    /** 从槽位账本里按 key/id 取出第三方插件注册的原始组件。 */
-    function resolveComponent(ctx, target) {
+    /**
+     * 从槽位账本里按 key/id 取出条目，连同注册时的 inject 结果和 locale 座位。
+     * 框架本来会在渲染该条目时替它调用 inject、绑定 t，直调时要自己补这两样。
+     */
+    function resolveEntry(ctx, target) {
       var list = []
       try {
         if (ctx.slots && typeof ctx.slots.entriesOfSlot === 'function') {
@@ -318,20 +313,36 @@ window.__ModuleLoader__.load({
       } catch (error) {
         list = []
       }
+
       for (var i = 0; i < list.length; i++) {
-        var options = (list[i] && list[i].options) || {}
+        var entry = list[i]
+        var options = (entry && entry.options) || {}
         var matched = target.slot === 'main'
           ? options.key === target.only
           : options.id === target.only
-        if (matched) return list[i].component || null
+        if (!matched) continue
+
+        var injected = null
+        try {
+          if (typeof entry.inject === 'function') injected = entry.inject() || null
+        } catch (error) {
+          injected = null
+        }
+
+        var translate = null
+        if (typeof entry.locale === 'string' && ctx.locale && typeof ctx.locale.bind === 'function') {
+          try { translate = ctx.locale.bind(entry.locale) } catch (error) { translate = null }
+        }
+
+        return { component: entry.component || null, injected: injected, t: translate }
       }
       return null
     }
 
     exports.apply = apply
-    // layout 必须声明：降级页的「打开原面板」靠 ctx.layout.selectPanel 跳转，
-    // 少了它 ctx.layout 是 undefined，按钮点了没有任何反应。
-    exports.inject = ['slots', 'layout']
+    // layout：降级页的「打开原面板」靠 ctx.layout.selectPanel 跳转。
+    // locale：重建条目 props 时要用 ctx.locale.bind(entry.locale) 补 t。
+    exports.inject = ['slots', 'layout', 'locale']
     return module.exports
   }
 })
