@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Plugin hub">
+  <rect width="64" height="64" rx="14" fill="#101827"/>
+  <rect x="11" y="11" width="19" height="19" rx="5" fill="#3964fe"/>
+  <rect x="34" y="11" width="19" height="19" rx="5" fill="#5b82ff" opacity="0.75"/>
+  <rect x="11" y="34" width="19" height="19" rx="5" fill="#5b82ff" opacity="0.75"/>
+  <rect x="34" y="34" width="19" height="19" rx="5" fill="#8fb0ff" opacity="0.55"/>
+  <path d="M40.5 43.5h6M43.5 40.5v6" stroke="#101827" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

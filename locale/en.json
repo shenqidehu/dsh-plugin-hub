@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Plugin hub",
+    "description": "One fixed sidebar entry for every self-made plugin: a single panel that hosts each plugin's usage page and settings page, shared by desktop and mobile.",
+    "detail": "docs/DETAIL.md"
+  }
+}

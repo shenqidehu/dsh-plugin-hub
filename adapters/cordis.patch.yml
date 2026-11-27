@@ -1,0 +1,6 @@
+# dsh-hub-adapters —— DSH bundle patch
+#
+# 纯浏览器半侧插件：把第三方插件已注册的页面搬进插件中心。
+- insert:
+    - id: dsh-hub-adapters
+      name: dsh-hub-adapters

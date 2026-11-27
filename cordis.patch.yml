@@ -1,0 +1,7 @@
+# dsh-plugin-hub —— DSH bundle patch
+#
+# Host 半侧只占一个空壳行（面板全部逻辑在浏览器半侧）；浏览器半侧由
+# package.json 的 dsh.client 声明，宿主按声明自动组装 client bundle。
+- insert:
+    - id: dsh-plugin-hub
+      name: dsh-plugin-hub

@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Plugin hub adapters",
+    "description": "Surfaces already-installed third-party plugins inside the plugin hub by rendering the panels and settings sections they already registered, without touching their code. Falls back to an entry link when embedding fails.",
+    "detail": "docs/DETAIL.md"
+  }
+}
