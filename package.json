@@ -1,6 +1,6 @@
 {
   "name": "@twtsg/dsh-plugin-hub",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "自制插件统一入口面板：固定在侧边栏，集中提供每个自制插件的使用页与设置页，电脑端 DSH 与手机端 DSH Go 通用。",
   "keywords": [
     "dsh",

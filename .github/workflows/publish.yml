@@ -1,0 +1,66 @@
+name: Publish to npm
+
+# 通过 npm Trusted Publishing（OIDC）发布，不需要 token / OTP。
+# 前置：在 npm 上给每个包配置 Trusted Publisher
+#   Publisher: GitHub Actions
+#   Organization or user: shenqidehu
+#   Repository: dsh-plugin-hub
+#   Workflow filename: publish.yml
+#   Environment: 留空
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: '发布哪个包'
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - hub
+          - adapters
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  hub:
+    if: github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'hub'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted Publishing 需要 npm CLI 11.5.1+
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
+      - name: Publish @twtsg/dsh-plugin-hub
+        run: npm publish --provenance --access public
+
+  adapters:
+    if: github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'adapters'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
+      - name: Publish dsh-hub-adapters
+        working-directory: adapters
+        run: npm publish --provenance --access public

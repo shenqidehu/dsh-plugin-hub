@@ -153,7 +153,40 @@ window.__ModuleLoader__.load({
       if (failure !== null) {
         return h(Fallback, { target: target, error: failure, openPanel: openPanel })
       }
-      if (!resolved || !resolved.component) {
+      if (!resolved) {
+        return h(Fallback, {
+          target: target,
+          error: new Error('没有找到「' + target.only + '」对应的注册项：插件可能已禁用，或升级后改了槽位 id'),
+          openPanel: openPanel
+        })
+      }
+
+      // 动作型适配：不渲染原组件（它可能自带 fixed 定位或依赖特定容器），
+      // 只借它 inject 里暴露的回调，在面板里画一个按钮。
+      if (target.action) {
+        var actionFn = resolved.injected ? resolved.injected[target.action.method] : null
+        var callable = typeof actionFn === 'function'
+        return h('div', { className: hostClass },
+          target.note ? h('div', { className: '__ad_note' }, target.note) : null,
+          h('button', {
+            type: 'button',
+            className: '__ad_btn',
+            disabled: !callable,
+            onClick: function () {
+              if (!callable) return
+              try {
+                actionFn()
+              } catch (error) {
+                if (typeof console !== 'undefined' && console.warn) {
+                  console.warn('[dsh-hub-adapters] 动作调用失败：' + (error && error.message ? error.message : String(error)))
+                }
+              }
+            }
+          }, callable ? (target.action.label || target.label) : '该插件没有暴露打开动作')
+        )
+      }
+
+      if (!resolved.component) {
         return h(Fallback, {
           target: target,
           error: new Error('没有找到「' + target.only + '」对应的组件：插件可能已禁用，或升级后改了槽位 id'),
@@ -244,19 +277,20 @@ window.__ModuleLoader__.load({
         settings: { slot: 'settings.section', only: 'startup-screen', label: '启动界面' }
       },
       {
-        // ds-harness-remote 没有整页面板，它的 UI 是动作按钮。
-        // 不用 sidebar.footer.action 那个：它靠 useFooterLane 把节点挂进侧边栏
-        // 底部的固定容器，换到面板里渲染会是空白。
-        // 改用会话头部那个 inline 按钮（同插件、同一套 inject）。
+        // ds-harness-remote 没有整页面板。它把 UI 注册在 shell.overlay
+        // （桌面端 nativeTitlebar 为真，走浮层分支），那个组件自带 fixed 定位，
+        // 直接搬进面板会飘到页面角落。
+        // 改用它 inject 里暴露的 onSignIn（= 插件内部的 openRemote 广播），
+        // 在面板里画一个按钮，点它打开原生远程控制浮层。
         id: 'ds-harness-remote',
         label: '远程控制',
         order: 107,
         usage: {
-          slot: 'conversation.session.header.utilities',
+          slot: 'shell.overlay',
           only: 'ds-harness-remote-global-context',
           label: '远程控制',
           note: 'P2P 端到端加密远程访问：用手机或其它设备连上这台电脑的 Harness。点下面的按钮打开远程控制面板（二维码 / 设备列表 / 连接状态）。',
-          ownerProps: { inline: true }
+          action: { label: '打开远程控制面板', method: 'onSignIn' }
         }
       }
     ]
